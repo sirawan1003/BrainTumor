@@ -1,0 +1,17 @@
+torch
+torchvision
+torchinfo
+lightning
+lightning.fabric
+timm
+scikit-learn
+scipy
+numpy
+pandas
+matplotlib
+opencv-python  # Correct package name for OpenCV
+Pillow  # Correct package for image processing (instead of PIL)
+tqdm
+evaluate
+requests
+numpy
