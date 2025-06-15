@@ -9,47 +9,56 @@ st.set_page_config(
     page_title="Brain Tumor Classifier",
     page_icon="🧠",
     layout="centered",
-    initial_sidebar_state="auto"
 )
 
-# Set title 
-st.title('Brain Tumor Classification')
-# Set Header 
-st.header('Please upload a picture')
+# Title
+st.markdown("<h1 style='text-align: center;'>🧠 Brain Tumor Classification</h1>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align: center;'>Please upload a picture</h4>", unsafe_allow_html=True)
 
-
-#Load Model 
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+# Load model
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = torch.load('resnet50d_checkpoint_fold0.pt', map_location=device, weights_only=False)
+class_names = ['glioma_tumor', 'meningioma_tumor', 'no_tumor', 'pituitary_tumor']
 
-
-
-# Display image & Prediction 
+# Upload
 uploaded_image = st.file_uploader('Choose an image', type=['jpg', 'jpeg', 'png'])
 
 if uploaded_image is not None:
     image = Image.open(uploaded_image).convert('RGB')
-    st.image(image, caption='Uploaded Image', use_container_width=True)
 
-    class_name = ['glioma_tumor', 'meningioma_tumor', 'no_tumor', 'pituitary_tumor']
+    col1, col2 = st.columns([1, 1])  # แบ่งแนวนอน 2 คอลัมน์
 
-    if st.button('Prediction'):
-        # Prediction class
-        probli = pred_class(model, image, class_name)
+    with col1:
+        st.image(image, caption='Uploaded Image', width=200)
+        if st.button("Prediction"):
+            st.session_state['predict_now'] = True  # ใช้ session เพื่อให้ col2 รู้ว่าต้องแสดงผล
 
-        # Extract probability array from tuple
-        probabilities = np.array(probli[0])  # ใช้เฉพาะค่าความน่าจะเป็น
+    if 'predict_now' in st.session_state and st.session_state['predict_now']:
+        with col2:
+            
+            prob, pred_class_name = pred_class(model, image, class_names)
+            probabilities = np.array(prob)[0]
 
-        # Handle different shapes
-        if probabilities.ndim == 2:  # ถ้ามี shape (1,4) ต้องดึงค่าออกมา
-            probabilities = probabilities[0]
+            
+            result_html = """
+            <div style='
+                background-color: #ffffff;
+                padding: 15px 20px;
+                border-radius: 8px;
+                box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.05);
+                border: 4px solid black;
+                width: 300px;
+                text-align: left;
+            '>
+            """
 
-        # Get max index
-        max_index = np.argmax(probabilities)
+            for i, class_name in enumerate(class_names):
+                percent = float(probabilities[i]) * 100
+                if class_name == pred_class_name:
+                    result_html += f"<p style='color:#0000ff; font-weight:bold; font-size:18px;'>{class_name} : {percent:.2f}%</p>"
+                else:
+                    result_html += f"<p style='font-size:16px; color:#000;'>{class_name} : {percent:.2f}%</p>"
 
-        # Display prediction results
-        st.write("## Prediction Result")
-        for i in range(len(class_name)):
-            color = "blue" if i == max_index else None
-            value = float(probabilities[i]) * 100  # Convert to percentage
-            st.write(f"## <span style='color:{color}'>{class_name[i]} : {value:.2f}%</span>", unsafe_allow_html=True)
+            result_html += "</div>"
+
+            st.markdown(result_html, unsafe_allow_html=True)
